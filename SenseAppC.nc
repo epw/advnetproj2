@@ -46,14 +46,16 @@ configuration SenseAppC
 { } 
 implementation { 
   
-  components SenseC as App, MainC, LedsC, new TimerMilliC(), new HamamatsuS1087ParC() as Sensor;
+  components SenseC as App, MainC, LedsC, new HamamatsuS1087ParC() as Sensor;
+  components new TimerMilliC() as SamplingTimer, new TimerMilliC() as BlueLedTimer;
   components new AMSenderC(AM_RADIO_DATA_MSG);
   components new AMReceiverC(AM_RADIO_DATA_MSG);
   components ActiveMessageC;
 
   App.Boot -> MainC.Boot;
   App.Leds -> LedsC;
-  App.Timer -> TimerMilliC;
+  App.SamplingTimer -> SamplingTimer;
+  App.BlueLedTimer -> BlueLedTimer;
   App.Read -> Sensor;
   App.Receive -> AMReceiverC;
   App.AMSend -> AMSenderC;

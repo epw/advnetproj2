@@ -75,7 +75,8 @@ module SenseC
     interface AMSend;
     interface SplitControl as AMControl;
     interface Packet;
-    interface Timer<TMilli>;
+    interface Timer<TMilli> as SamplingTimer;
+    interface Timer<TMilli> as BlueLedTimer;
     interface Read<uint16_t>;
   }
 }
@@ -99,10 +100,11 @@ implementation
   };
   
   // the mote number (either 0 or 1)
-  #define MY_MOTE_ID MOTE1
+  #define MY_MOTE_ID MOTE2
 
-  // sampling frequency in binary milliseconds
-  #define SAMPLING_FREQUENCY 250
+  // sampling delays in binary milliseconds
+  #define SAMPLING_DELAY 250
+  #define BLUE_LED_SAMPLING_DELAY 1000
   
   // light threshold
   #define LIGHT_THRES 150
@@ -113,7 +115,8 @@ implementation
   
   event void AMControl.startDone(error_t err) {
     if (err == SUCCESS) {
-		call Timer.startPeriodic(SAMPLING_FREQUENCY);
+		call SamplingTimer.startPeriodic(SAMPLING_DELAY);
+		call BlueLedTimer.startPeriodic(BLUE_LED_SAMPLING_DELAY);
     }
     else {
       call AMControl.start();
@@ -124,8 +127,15 @@ implementation
     // do nothing
   }
 
-  event void Timer.fired() 
-  {
+  event void BlueLedTimer.fired(){
+  	if (led0On && led1On) {
+  		call Leds.led2On();
+  	} else {
+  		call Leds.led2Off();
+  	}
+  }
+
+  event void SamplingTimer.fired(){
     call Read.read();
     
 	// send out the local LED state to other motes
