@@ -43,7 +43,8 @@ public class PC implements MessageListener {
 
   public void messageReceived(int to, Message message) {
     RadioDataMsg msg = (RadioDataMsg)message;
-//    System.out.println("Received packet sequence number " + msg.get_counter());
+    System.out.println ("Got a packet.");
+    //    System.out.println("Received packet sequence number " + msg.get_counter());
   }
   
   private static void usage() {
@@ -77,7 +78,7 @@ public class PC implements MessageListener {
 	
     PC serial = new PC(mif);
 
-    serial.sendPackets();
+//    serial.sendPackets();
   }
 
 

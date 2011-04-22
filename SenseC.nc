@@ -54,7 +54,7 @@ enum {
 };
   
 // the mote number (either 0 or 1)
-#define MY_MOTE_ID MOTE0
+#define MY_MOTE_ID MOTE1
 
 // sampling delays in binary milliseconds
 #define SAMPLING_DELAY 250
@@ -140,16 +140,16 @@ implementation
     // do nothing
   }
 
-  event void SerialAMControl.startDone(error_t err) {
+  event void SerialControl.startDone(error_t err) {
     if (err == SUCCESS) {
 		// do nothing
     }
     else {
-      call SerialAMControl.start();
+      call SerialControl.start();
     }
   }
 
-  event void SerialAMControl.stopDone(error_t err) {
+  event void SerialControl.stopDone(error_t err) {
     // do nothing
   }
 
