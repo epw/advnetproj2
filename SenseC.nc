@@ -43,18 +43,35 @@
  */
 
 #include "Timer.h"
+#include "RadioDataToLeds.h"
 
 module SenseC
 {
   uses {
     interface Boot;
     interface Leds;
+    interface Receive;
+    interface AMSend;
+    interface SplitControl as AMControl;
+    interface Packet;
     interface Timer<TMilli>;
     interface Read<uint16_t>;
   }
 }
 implementation
 {
+  // current packet
+  message_t packet;
+  
+  // mutex lock for packet operations
+  bool locked = FALSE;
+  
+  // designates if LED should be on or not
+  bool ledOn = FALSE;
+  
+  // the mote number (either 0 or 1)
+  #define MOTE_ID 0
+
   // sampling frequency in binary milliseconds
   #define SAMPLING_FREQUENCY 250
   
@@ -62,23 +79,88 @@ implementation
   #define LIGHT_THRES 150
   
   event void Boot.booted() {
-    call Timer.startPeriodic(SAMPLING_FREQUENCY);
+    call AMControl.start();
+  }
+  
+  event void AMControl.startDone(error_t err) {
+    if (err == SUCCESS) {
+		call Timer.startPeriodic(SAMPLING_FREQUENCY);
+    }
+    else {
+      call AMControl.start();
+    }
+  }
+
+  event void AMControl.stopDone(error_t err) {
+    // do nothing
   }
 
   event void Timer.fired() 
   {
     call Read.read();
+
+    if (locked) {return;}
+    else {
+      radio_data_msg_t* rcm = (radio_data_msg_t*)call Packet.getPayload(&packet, sizeof(radio_data_msg_t));
+      if (rcm == NULL) {return;}
+
+      rcm->data = MOTE_ID & (ledOn? 0x02 : 0x00);
+      if (call AMSend.send(AM_BROADCAST_ADDR, &packet, sizeof(radio_data_msg_t)) == SUCCESS) {
+			locked = TRUE;
+      }
+    }
   }
 
-  event void Read.readDone(error_t result, uint16_t data) 
-  {
+
+  event void Read.readDone(error_t result, uint16_t data) {
     if (result == SUCCESS){
     
     	if (data > LIGHT_THRES){
-    		call Leds.led0On();
+    		ledOn = TRUE;
     	} else {
-    		call Leds.led0Off();
+    		ledOn = FALSE;
     	}
     }
   }
+  
+  
+    event message_t* Receive.receive(message_t* bufPtr, void* payload, uint8_t len) {
+	    if (len != sizeof(radio_data_msg_t)) {return bufPtr;}
+	    else {
+		    radio_data_msg_t* rcm = (radio_data_msg_t*)payload;
+		       
+		    // if data from mote 0
+		    if (rcm->data & MOTEMASK) {
+		    		
+		    	// If LED should be on, turn on
+				if (rcm->data & LEDMASK){
+					call Leds.led0On();
+					
+				// If LED should be off, turn off
+				} else {
+					call Leds.led0Off();
+				}
+		    } 
+		    
+		    // if data from mote 1
+		    else {
+		    
+		    	// If LED should be on, turn on
+		    	if (rcm->data & LEDMASK){
+		    		call Leds.led1On();
+		    		
+		    	// If LED should be off, turn off
+		    	} else {
+		    		call Leds.led1Off();
+		    	}
+		    }
+		}
+	    return bufPtr;
+  	}
+  
+    event void AMSend.sendDone(message_t* bufPtr, error_t error) {
+	    if (&packet == bufPtr) {
+	      locked = FALSE;
+	    }
+  	}
 }
