@@ -61,7 +61,7 @@ enum {
 #define BLUE_LED_SAMPLING_DELAY 1000
   
 // light threshold
-#define LIGHT_THRES 150
+#define LIGHT_THRES 100
   
 
 /** Serial Packet Code ******************************************/
