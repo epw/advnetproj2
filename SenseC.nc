@@ -97,7 +97,7 @@ implementation
   };
   
   // the mote number (either 0 or 1)
-  #define MY_MOTE_ID MOTE0
+  #define MY_MOTE_ID MOTE1
 
   // sampling frequency in binary milliseconds
   #define SAMPLING_FREQUENCY 250
