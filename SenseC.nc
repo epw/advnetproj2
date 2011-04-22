@@ -88,12 +88,14 @@ implementation
   bool locked = FALSE;
   
   // designates if LED should be on or not
-  bool ledOn = FALSE;
+  bool led0On = FALSE;
+  bool led1On = FALSE;
   
   // enumeration of mote IDs
   enum {
   	MOTE0 = 0,
-  	MOTE1 = 1
+  	MOTE1 = 1,
+  	MOTE2 = 2
   };
   
   // the mote number (either 0 or 1)
@@ -132,7 +134,15 @@ implementation
       radio_data_msg_t* rcm = (radio_data_msg_t*)call Packet.getPayload(&packet, sizeof(radio_data_msg_t));
       if (rcm == NULL) {return;}
 
-      rcm->data = serial_pack(MY_MOTE_ID, ledOn);
+		// send different data based on which mote is configured
+		if (MY_MOTE_ID == MOTE0){
+      		rcm->data = serial_pack(MY_MOTE_ID, led0On);
+      	} else if (MY_MOTE_ID == MOTE1){
+      		rcm->data = serial_pack(MY_MOTE_ID, led1On);
+      	} else {
+      		rcm->data = serial_pack(MY_MOTE_ID, FALSE);
+      	}
+      	
       if (call AMSend.send(AM_BROADCAST_ADDR, &packet, sizeof(radio_data_msg_t)) == SUCCESS) {
 			locked = TRUE;
       }
@@ -145,31 +155,38 @@ implementation
 		
 		// store the local LED state
     	if (data > LIGHT_THRES){
-    		ledOn = TRUE;
+    		switch(MY_MOTE_ID){
+    			case MOTE0:
+    				led0On = TRUE;
+    			break;
+    			case MOTE1:
+    				led1On = TRUE;
+    			break;
+    		}
     	} else {
-    		ledOn = FALSE;
+			switch(MY_MOTE_ID){
+    			case MOTE0:
+    				led0On = FALSE;
+    			break;
+    			case MOTE1:
+    				led1On = FALSE;
+    			break;
+    		}
     	}
     	
-    	// change the state of the local LED
-    	if (ledOn){
-    		switch(MY_MOTE_ID){
-    			case MOTE0:
-    				call Leds.led0On();
-    			break;
-    			case MOTE1:
-    				call Leds.led1On();
-    			break;
-    		} 
+    	// change the state of the LED 0
+    	if (led0On){
+   			call Leds.led0On();
     	} else {
-    		switch(MY_MOTE_ID){
-    			case MOTE0:
-    				call Leds.led0Off();
-    			break;
-    			case MOTE1:
-    				call Leds.led1Off();
-    			break;
-    		}     	
-   		} 	
+    		call Leds.led0Off();
+    	}	
+    	
+    	// change the state of the LED 1
+    	if (led1On){
+    		call Leds.led1On();
+    	} else {
+    		call Leds.led1Off();
+    	} 	
     }
   }
   
@@ -182,13 +199,13 @@ implementation
 		    // if data from mote 0
 		    if (serial_getRadioId(rcm->data) == MOTE0){
 		    		
-		    	// If LED should be on, turn on
+		    	// If LED should be on
 				if (serial_getLedState(rcm->data)){
-					call Leds.led0On();
+					led0On = TRUE;
 					
-				// If LED should be off, turn off
+				// If LED should be off
 				} else {
-					call Leds.led0Off();
+					led0On = FALSE;
 				}
 		    } 
 		    
@@ -197,11 +214,11 @@ implementation
 		    
 		    	// If LED should be on, turn on
 		    	if (serial_getLedState(rcm->data)){
-		    		call Leds.led1On();
+		    		led1On = TRUE;
 		    		
 		    	// If LED should be off, turn off
 		    	} else {
-		    		call Leds.led1Off();
+		    		led1On = FALSE;
 		    	}
 		    }
 		}
