@@ -140,6 +140,19 @@ implementation
     // do nothing
   }
 
+  event void SerialAMControl.startDone(error_t err) {
+    if (err == SUCCESS) {
+		// do nothing
+    }
+    else {
+      call SerialAMControl.start();
+    }
+  }
+
+  event void SerialAMControl.stopDone(error_t err) {
+    // do nothing
+  }
+
   event void BlueLedTimer.fired(){
   	if (led0On && led1On) {
   		call Leds.led2On();
@@ -149,23 +162,30 @@ implementation
   }
 
   event void SamplingTimer.fired(){
+	radio_data_msg_t* rcm;
+	
     call Read.read();
     
-	// send out the local LED state to other motes
-    if (locked) {return;}
-    else {
-      radio_data_msg_t* rcm = (radio_data_msg_t*)call Packet.getPayload(&packet, sizeof(radio_data_msg_t));
-      if (rcm == NULL) {return;}
+    rcm = (radio_data_msg_t*)call Packet.getPayload(&packet, sizeof(radio_data_msg_t));
+    if (rcm == NULL) {return;}
 
-		// send different data based on which mote is configured
-		if (MY_MOTE_ID == MOTE0){
-      		rcm->data = serial_pack(MY_MOTE_ID, led0On);
-      	} else if (MY_MOTE_ID == MOTE1){
-      		rcm->data = serial_pack(MY_MOTE_ID, led1On);
-      	} else {
-      		rcm->data = serial_pack(MY_MOTE_ID, FALSE);
-      	}
+	// send different data based on which mote is configured
+	if (MY_MOTE_ID == MOTE0){
+   		rcm->data = serial_pack(MY_MOTE_ID, led0On);
+   	} else if (MY_MOTE_ID == MOTE1){
+   		rcm->data = serial_pack(MY_MOTE_ID, led1On);
+   	} else {
+   		rcm->data = serial_pack(MY_MOTE_ID, FALSE);
+   	}
       	
+    if (!serialLocked) {
+      if (call SerialAMSend.send(AM_BROADCAST_ADDR, &packet, sizeof(radio_data_msg_t)) == SUCCESS) {
+			serialLocked = TRUE;
+      }
+    }
+    
+	// send out the local LED state to other motes
+    if (!locked) {
       if (call AMSend.send(AM_BROADCAST_ADDR, &packet, sizeof(radio_data_msg_t)) == SUCCESS) {
 			locked = TRUE;
       }
@@ -233,7 +253,7 @@ implementation
 		    } 
 		    
 		    // if data from mote 1
-'		    else if (serial_getRadioId(rcm->data) == MOTE1){
+		    else if (serial_getRadioId(rcm->data) == MOTE1){
 		    
 		    	// If LED should be on, turn on
 		    	if (serial_getLedState(rcm->data)){
