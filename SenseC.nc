@@ -45,6 +45,27 @@
 #include "Timer.h"
 #include "RadioDataToLeds.h"
 
+/** Serial Packet Code ******************************************/
+#define ID_MASK 0x0F
+#define LED_OFFSET 4
+#define LED_MASK 0x01
+
+uint16_t serial_pack(int radioId, bool ledOn){
+	uint16_t newPacket = 0;
+	newPacket |= (radioId & ID_MASK);
+	newPacket |= (ledOn? (1 << LED_OFFSET) : 0);
+	return newPacket;
+}
+
+int serial_getRadioId(uint16_t packet){
+	return (packet & ID_MASK);
+}
+
+bool serial_getLedState(uint16_t packet){
+	return ((packet >> LED_OFFSET) & LED_MASK)? TRUE : FALSE;
+}
+/*****************************************************************/
+
 module SenseC
 {
   uses {
@@ -69,8 +90,14 @@ implementation
   // designates if LED should be on or not
   bool ledOn = FALSE;
   
+  // enumeration of mote IDs
+  enum {
+  	MOTE0 = 0,
+  	MOTE1 = 1
+  };
+  
   // the mote number (either 0 or 1)
-  #define MOTE_ID 0
+  #define MY_MOTE_ID MOTE0
 
   // sampling frequency in binary milliseconds
   #define SAMPLING_FREQUENCY 250
@@ -98,13 +125,14 @@ implementation
   event void Timer.fired() 
   {
     call Read.read();
-
+    
+	// send out the local LED state to other motes
     if (locked) {return;}
     else {
       radio_data_msg_t* rcm = (radio_data_msg_t*)call Packet.getPayload(&packet, sizeof(radio_data_msg_t));
       if (rcm == NULL) {return;}
 
-      rcm->data = MOTE_ID & (ledOn? 0x02 : 0x00);
+      rcm->data = serial_pack(MY_MOTE_ID, ledOn);
       if (call AMSend.send(AM_BROADCAST_ADDR, &packet, sizeof(radio_data_msg_t)) == SUCCESS) {
 			locked = TRUE;
       }
@@ -114,12 +142,34 @@ implementation
 
   event void Read.readDone(error_t result, uint16_t data) {
     if (result == SUCCESS){
-    
+		
+		// store the local LED state
     	if (data > LIGHT_THRES){
     		ledOn = TRUE;
     	} else {
     		ledOn = FALSE;
     	}
+    	
+    	// change the state of the local LED
+    	if (ledOn){
+    		switch(MY_MOTE_ID){
+    			case MOTE0:
+    				call Leds.led0On();
+    			break;
+    			case MOTE1:
+    				call Leds.led1On();
+    			break;
+    		} 
+    	} else {
+    		switch(MY_MOTE_ID){
+    			case MOTE0:
+    				call Leds.led0Off();
+    			break;
+    			case MOTE1:
+    				call Leds.led1Off();
+    			break;
+    		}     	
+   		} 	
     }
   }
   
@@ -130,10 +180,10 @@ implementation
 		    radio_data_msg_t* rcm = (radio_data_msg_t*)payload;
 		       
 		    // if data from mote 0
-		    if (rcm->data & MOTEMASK) {
+		    if (serial_getRadioId(rcm->data) == MOTE0){
 		    		
 		    	// If LED should be on, turn on
-				if (rcm->data & LEDMASK){
+				if (serial_getLedState(rcm->data)){
 					call Leds.led0On();
 					
 				// If LED should be off, turn off
@@ -143,10 +193,10 @@ implementation
 		    } 
 		    
 		    // if data from mote 1
-		    else {
+		    else if (serial_getRadioId(rcm->data) == MOTE1){
 		    
 		    	// If LED should be on, turn on
-		    	if (rcm->data & LEDMASK){
+		    	if (serial_getLedState(rcm->data)){
 		    		call Leds.led1On();
 		    		
 		    	// If LED should be off, turn off
