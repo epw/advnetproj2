@@ -54,7 +54,7 @@ enum {
 };
   
 // the mote number (either 0 or 1)
-#define MY_MOTE_ID MOTE1
+#define MY_MOTE_ID MOTE0
 
 // sampling delays in binary milliseconds
 #define SAMPLING_DELAY 250
@@ -110,7 +110,7 @@ implementation
   message_t packet;
 
   // current serial packet
-//  message_t serialPacket;
+  message_t serialPacket;
   
   // mutex lock for packet operations
   bool locked = FALSE;
@@ -178,12 +178,6 @@ implementation
    	} else {
    		rcm->data = serial_pack(MY_MOTE_ID, FALSE);
    	}
-      	
-    if (!serialLocked) {
-      if (call SerialAMSend.send(AM_BROADCAST_ADDR, &packet, sizeof(radio_data_msg_t)) == SUCCESS) {
-			serialLocked = TRUE;
-      }
-    }
     
 	// send out the local LED state to other motes
     if (!locked) {
@@ -195,6 +189,8 @@ implementation
 
 
   event void Read.readDone(error_t result, uint16_t data) {
+	radio_data_msg_t* rcm;
+
     if (result == SUCCESS){
 		
 		// store the local LED state
@@ -231,6 +227,22 @@ implementation
     	} else {
     		call Leds.led1Off();
     	} 	
+
+	    rcm = (radio_data_msg_t*)call RadioPacket.getPayload(&serialPacket, sizeof(radio_data_msg_t));
+    	if (rcm == NULL) {return;}
+
+		if (MY_MOTE_ID == MOTE0){
+   			rcm->data = serial_pack(MY_MOTE_ID, led0On);
+   		} else if (MY_MOTE_ID == MOTE1){
+   			rcm->data = serial_pack(MY_MOTE_ID, led1On);
+   		} else {
+   			rcm->data = serial_pack(MY_MOTE_ID, FALSE);
+   		}
+    	if (!serialLocked) {
+      		if (call SerialAMSend.send(AM_BROADCAST_ADDR, &serialPacket, sizeof(radio_data_msg_t)) == SUCCESS) {
+				serialLocked = TRUE;
+      		}
+    	}
     }
   }
   
@@ -280,7 +292,7 @@ implementation
 	}
 	
 	event void SerialAMSend.sendDone (message_t* bufPtr, error_t error) {
-		if (&packet == bufPtr) {
+		if (&serialPacket == bufPtr) {
 			serialLocked = FALSE;
 		}
 	}
