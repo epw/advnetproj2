@@ -45,6 +45,24 @@
 #include "Timer.h"
 #include "RadioDataToLeds.h"
 
+// enumeration of mote IDs
+enum {
+	MOTE0 = 0,
+	MOTE1 = 1,
+	MOTE2 = 2
+};
+  
+// the mote number (either 0 or 1)
+#define MY_MOTE_ID MOTE0
+
+// sampling delays in binary milliseconds
+#define SAMPLING_DELAY 250
+#define BLUE_LED_SAMPLING_DELAY 1000
+  
+// light threshold
+#define LIGHT_THRES 150
+  
+
 /** Serial Packet Code ******************************************/
 #define ID_MASK 0x0F
 #define LED_OFFSET 4
@@ -91,23 +109,6 @@ implementation
   // designates if LED should be on or not
   bool led0On = FALSE;
   bool led1On = FALSE;
-  
-  // enumeration of mote IDs
-  enum {
-  	MOTE0 = 0,
-  	MOTE1 = 1,
-  	MOTE2 = 2
-  };
-  
-  // the mote number (either 0 or 1)
-  #define MY_MOTE_ID MOTE2
-
-  // sampling delays in binary milliseconds
-  #define SAMPLING_DELAY 250
-  #define BLUE_LED_SAMPLING_DELAY 1000
-  
-  // light threshold
-  #define LIGHT_THRES 150
   
   event void Boot.booted() {
     call AMControl.start();
