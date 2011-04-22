@@ -60,13 +60,13 @@ implementation {
   App.SamplingTimer -> SamplingTimer;
   App.BlueLedTimer -> BlueLedTimer;
   App.Read -> Sensor;
-  App.Receive -> AMReceiverC;
-  App.AMSend -> AMSenderC;
-  App.AMControl -> ActiveMessageC;
-  App.Packet -> AMSenderC;
+  App.RadioReceive -> AMReceiverC;
+  App.RadioAMSend -> AMSenderC;
+  App.RadioAMControl -> ActiveMessageC;
+  App.RadioPacket -> AMSenderC;
 
   App.SerialControl -> AM;
-  App.SerialReceive -> AM.Receive[AM_TEST_SERIAL_MSG];
-  App.SerialAMSend -> AM.AMSend[AM_TEST_SERIAL_MSG];
+  App.SerialReceive -> AM.Receive[AM_RADIO_DATA_MSG];
+  App.SerialAMSend -> AM.AMSend[AM_RADIO_DATA_MSG];
   App.SerialPacket -> AM;
 }

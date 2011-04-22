@@ -90,10 +90,10 @@ module SenseC
   uses {
     interface Boot;
     interface Leds;
-    interface Receive;
-    interface AMSend;
-    interface SplitControl as AMControl;
-    interface Packet;
+    interface Receive as RadioReceive;
+    interface AMSend as RadioAMSend;
+    interface SplitControl as RadioAMControl;
+    interface Packet as RadioPacket;
     interface Timer<TMilli> as SamplingTimer;
     interface Timer<TMilli> as BlueLedTimer;
     interface Read<uint16_t>;
@@ -110,7 +110,7 @@ implementation
   message_t packet;
 
   // current serial packet
-  message_t serialPacket;
+//  message_t serialPacket;
   
   // mutex lock for packet operations
   bool locked = FALSE;
@@ -123,20 +123,21 @@ implementation
   bool led1On = FALSE;
   
   event void Boot.booted() {
-    call AMControl.start();
+    call RadioAMControl.start();
+    call SerialControl.start();
   }
   
-  event void AMControl.startDone(error_t err) {
+  event void RadioAMControl.startDone(error_t err) {
     if (err == SUCCESS) {
 		call SamplingTimer.startPeriodic(SAMPLING_DELAY);
 		call BlueLedTimer.startPeriodic(BLUE_LED_SAMPLING_DELAY);
     }
     else {
-      call AMControl.start();
+      call RadioAMControl.start();
     }
   }
 
-  event void AMControl.stopDone(error_t err) {
+  event void RadioAMControl.stopDone(error_t err) {
     // do nothing
   }
 
@@ -166,7 +167,7 @@ implementation
 	
     call Read.read();
     
-    rcm = (radio_data_msg_t*)call Packet.getPayload(&packet, sizeof(radio_data_msg_t));
+    rcm = (radio_data_msg_t*)call RadioPacket.getPayload(&packet, sizeof(radio_data_msg_t));
     if (rcm == NULL) {return;}
 
 	// send different data based on which mote is configured
@@ -186,7 +187,7 @@ implementation
     
 	// send out the local LED state to other motes
     if (!locked) {
-      if (call AMSend.send(AM_BROADCAST_ADDR, &packet, sizeof(radio_data_msg_t)) == SUCCESS) {
+      if (call RadioAMSend.send(AM_BROADCAST_ADDR, &packet, sizeof(radio_data_msg_t)) == SUCCESS) {
 			locked = TRUE;
       }
     }
@@ -234,7 +235,7 @@ implementation
   }
   
   
-    event message_t* Receive.receive(message_t* bufPtr, void* payload, uint8_t len) {
+    event message_t* RadioReceive.receive(message_t* bufPtr, void* payload, uint8_t len) {
 	    if (len != sizeof(radio_data_msg_t)) {return bufPtr;}
 	    else {
 		    radio_data_msg_t* rcm = (radio_data_msg_t*)payload;
@@ -268,7 +269,7 @@ implementation
 	    return bufPtr;
   	}
   
-    event void AMSend.sendDone(message_t* bufPtr, error_t error) {
+    event void RadioAMSend.sendDone(message_t* bufPtr, error_t error) {
 	    if (&packet == bufPtr) {
 	      locked = FALSE;
 	    }
@@ -279,7 +280,7 @@ implementation
 	}
 	
 	event void SerialAMSend.sendDone (message_t* bufPtr, error_t error) {
-		if (&serialPacket == bufPtr) {
+		if (&packet == bufPtr) {
 			serialLocked = FALSE;
 		}
 	}
