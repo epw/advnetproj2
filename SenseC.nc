@@ -188,26 +188,32 @@ implementation
 
 
   event void Read.readDone(error_t result, uint16_t data) {
-	radio_data_msg_t* rcm;
-
+	serial_data_msg_t* scm;
+	bool bright = data > LIGHT_THRES;
+	bool change = FALSE;
+	
     if (result == SUCCESS){
 		
 		// store the local LED state
-    	if (data > LIGHT_THRES){
+    	if (bright){
     		switch(MY_MOTE_ID){
     			case MOTE0:
+    				change = led0On ^ (bright);
     				led0On = TRUE;
     			break;
     			case MOTE1:
-    				led1On = TRUE;
+    				change = led1On ^ (bright);
+       				led1On = TRUE;
     			break;
     		}
     	} else {
 			switch(MY_MOTE_ID){
     			case MOTE0:
+    				change = led0On ^ (bright);
     				led0On = FALSE;
     			break;
     			case MOTE1:
+    				change = led1On ^ (bright);
     				led1On = FALSE;
     			break;
     		}
@@ -227,55 +233,54 @@ implementation
     		call Leds.led1Off();
     	} 	
 
-	    rcm = (radio_data_msg_t*)call RadioPacket.getPayload(&serialPacket, sizeof(radio_data_msg_t));
-    	if (rcm == NULL) {return;}
+		if (change) {
+		    scm = (serial_data_msg_t*)call RadioPacket.getPayload(&serialPacket, sizeof(serial_data_msg_t));
+    		if (scm == NULL) {return;}
 
-		if (MY_MOTE_ID == MOTE0){
-   			rcm->data = serial_pack(MY_MOTE_ID, led0On);
-   		} else if (MY_MOTE_ID == MOTE1){
-   			rcm->data = serial_pack(MY_MOTE_ID, led1On);
-   		} else {
-   			rcm->data = serial_pack(MY_MOTE_ID, FALSE);
-   		}
-    	if (!serialLocked) {
-      		if (call SerialAMSend.send(AM_BROADCAST_ADDR, &serialPacket, sizeof(radio_data_msg_t)) == SUCCESS) {
-				serialLocked = TRUE;
-      		}
+			scm->id = MY_MOTE_ID;
+			scm->state = bright;
+    		if (!serialLocked) {
+      			if (call SerialAMSend.send(AM_BROADCAST_ADDR, &serialPacket, sizeof(serial_data_msg_t)) == SUCCESS) {
+					serialLocked = TRUE;
+      			}
+    		}
     	}
-    }
+  	}
   }
   
   
     event message_t* RadioReceive.receive(message_t* bufPtr, void* payload, uint8_t len) {
+
 	    if (len != sizeof(radio_data_msg_t)) {return bufPtr;}
 	    else {
 		    radio_data_msg_t* rcm = (radio_data_msg_t*)payload;
-		       
+		    bool change = FALSE;
+		    serial_data_msg_t* scm;
+		    
 		    // if data from mote 0
 		    if (serial_getRadioId(rcm->data) == MOTE0){
-		    		
-		    	// If LED should be on
-				if (serial_getLedState(rcm->data)){
-					led0On = TRUE;
-					
-				// If LED should be off
-				} else {
-					led0On = FALSE;
-				}
+		    	change = (led0On != serial_getLedState (rcm->data));	    		
+				led0On = serial_getLedState (rcm->data);
 		    } 
 		    
 		    // if data from mote 1
 		    else if (serial_getRadioId(rcm->data) == MOTE1){
-		    
-		    	// If LED should be on, turn on
-		    	if (serial_getLedState(rcm->data)){
-		    		led1On = TRUE;
-		    		
-		    	// If LED should be off, turn off
-		    	} else {
-		    		led1On = FALSE;
-		    	}
+		    	change = (led1On != serial_getLedState (rcm->data));
+				led1On = serial_getLedState (rcm->data);
 		    }
+
+			if (change) {
+		    	scm = (serial_data_msg_t*)call RadioPacket.getPayload(&serialPacket, sizeof(serial_data_msg_t));
+    			if (scm == NULL) {return bufPtr;}
+
+				scm->id = serial_getRadioId (rcm->data);
+				scm->state = serial_getLedState (rcm->data);
+   				if (!serialLocked) {
+   					if (call SerialAMSend.send(AM_BROADCAST_ADDR, &serialPacket, sizeof(serial_data_msg_t)) == SUCCESS) {
+						serialLocked = TRUE;
+   					}
+   				}
+  			}
 		}
 	    return bufPtr;
   	}
