@@ -42,8 +42,6 @@
  * @author Jan Hauer
  */
 
-#include "SenseApp.h"
-
 configuration SenseAppC 
 { } 
 implementation { 
@@ -66,7 +64,7 @@ implementation {
   App.RadioPacket -> AMSenderC;
 
   App.SerialControl -> AM;
-  App.SerialReceive -> AM.Receive[AM_RADIO_DATA_MSG];
-  App.SerialAMSend -> AM.AMSend[AM_RADIO_DATA_MSG];
+  App.SerialReceive -> AM.Receive[AM_SERIAL_DATA_MSG];
+  App.SerialAMSend -> AM.AMSend[AM_SERIAL_DATA_MSG];
   App.SerialPacket -> AM;
 }

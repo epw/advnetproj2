@@ -44,7 +44,6 @@
 
 #include "Timer.h"
 #include "RadioDataToLeds.h"
-#include "SenseApp.h"
 
 // enumeration of mote IDs
 enum {

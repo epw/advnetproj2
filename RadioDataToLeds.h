@@ -38,4 +38,14 @@ enum {
   AM_RADIO_DATA_MSG = 6,
 };
 
+
+typedef nx_struct serial_data_msg {
+	nx_uint8_t id;
+	nx_uint8_t state;
+} serial_data_msg_t;
+
+enum {
+  AM_SERIAL_DATA_MSG = 0x89,
+};
+
 #endif
