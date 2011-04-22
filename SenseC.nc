@@ -44,6 +44,7 @@
 
 #include "Timer.h"
 #include "RadioDataToLeds.h"
+#include "SenseApp.h"
 
 // enumeration of mote IDs
 enum {
@@ -96,15 +97,26 @@ module SenseC
     interface Timer<TMilli> as SamplingTimer;
     interface Timer<TMilli> as BlueLedTimer;
     interface Read<uint16_t>;
+	
+	interface SplitControl as SerialControl;
+	interface Receive as SerialReceive;
+	interface AMSend as SerialAMSend;
+	interface Packet as SerialPacket;
   }
 }
 implementation
 {
   // current packet
   message_t packet;
+
+  // current serial packet
+  message_t serialPacket;
   
   // mutex lock for packet operations
   bool locked = FALSE;
+
+  // mutex lock for serial operations
+  bool serialLocked = FALSE;
   
   // designates if LED should be on or not
   bool led0On = FALSE;
@@ -221,7 +233,7 @@ implementation
 		    } 
 		    
 		    // if data from mote 1
-		    else if (serial_getRadioId(rcm->data) == MOTE1){
+'		    else if (serial_getRadioId(rcm->data) == MOTE1){
 		    
 		    	// If LED should be on, turn on
 		    	if (serial_getLedState(rcm->data)){
@@ -241,4 +253,14 @@ implementation
 	      locked = FALSE;
 	    }
   	}
+
+	event message_t* SerialReceive.receive (message_t *bufPtr, void* payload, uint8_t len) {
+		return bufPtr;
+	}
+	
+	event void SerialAMSend.sendDone (message_t* bufPtr, error_t error) {
+		if (&serialPacket == bufPtr) {
+			serialLocked = FALSE;
+		}
+	}
 }
