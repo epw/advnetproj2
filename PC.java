@@ -12,23 +12,23 @@ import net.tinyos.message.*;
 import net.tinyos.packet.*;
 import net.tinyos.util.*;
 
-public class TestSerial implements MessageListener {
+public class PC implements MessageListener {
 
   private MoteIF moteIF;
   
-  public TestSerial(MoteIF moteIF) {
+  public PC(MoteIF moteIF) {
     this.moteIF = moteIF;
-    this.moteIF.registerListener(new TestSerialMsg(), this);
+    this.moteIF.registerListener(new RadioDataMsg(), this);
   }
 
   public void sendPackets() {
     int counter = 0;
-    TestSerialMsg payload = new TestSerialMsg();
+    RadioDataMsg payload = new RadioDataMsg();
     
     try {
       while (true) {
 	System.out.println("Sending packet " + counter);
-	payload.set_counter(counter);
+//	payload.set_counter(counter);
 	moteIF.send(0, payload);
 	counter++;
 	try {Thread.sleep(1000);}
@@ -42,12 +42,12 @@ public class TestSerial implements MessageListener {
   }
 
   public void messageReceived(int to, Message message) {
-    TestSerialMsg msg = (TestSerialMsg)message;
-    System.out.println("Received packet sequence number " + msg.get_counter());
+    RadioDataMsg msg = (RadioDataMsg)message;
+//    System.out.println("Received packet sequence number " + msg.get_counter());
   }
   
   private static void usage() {
-    System.err.println("usage: TestSerial [-comm <source>]");
+    System.err.println("usage: java PC [-comm <source>]");
   }
   
   public static void main(String[] args) throws Exception {
@@ -72,16 +72,10 @@ public class TestSerial implements MessageListener {
     else {
       phoenix = BuildSource.makePhoenix(source, PrintStreamMessenger.err);
     }
-   
-    System.out.println ("got phoenix");
-   
+      
     MoteIF mif = new MoteIF(phoenix);
-
-	System.out.println ("got new mote");
 	
-    TestSerial serial = new TestSerial(mif);
-
-    System.out.println ("got new TestSerial");
+    PC serial = new PC(mif);
 
     serial.sendPackets();
   }
