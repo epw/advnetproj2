@@ -44,6 +44,7 @@
 
 #include "Timer.h"
 #include "RadioDataToLeds.h"
+#include "SerialData.h"
 
 // enumeration of mote IDs
 enum {

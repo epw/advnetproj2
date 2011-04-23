@@ -27,15 +27,16 @@
  * 94704.  Attention:  Intel License Inquiry.
  */
 
-#ifndef RADIO_DATA_TO_LEDS_H
-#define RADIO_DATA_TO_LEDS_H
+#ifndef SERIAL_DATA_TO_LEDS_H
+#define SERIAL_DATA_TO_LEDS_H
 
-typedef nx_struct radio_data_msg {
-	nx_uint16_t data;
-} radio_data_msg_t;
+typedef nx_struct serial_data_msg {
+	nx_uint8_t id;
+	nx_uint8_t state;
+} serial_data_msg_t;
 
 enum {
-  AM_RADIO_DATA_MSG = 6,
+  AM_SERIAL_DATA_MSG = 0x89,
 };
 
 #endif

@@ -18,12 +18,12 @@ public class PC implements MessageListener {
   
   public PC(MoteIF moteIF) {
     this.moteIF = moteIF;
-    this.moteIF.registerListener(new RadioDataMsg(), this);
+    this.moteIF.registerListener(new SerialData(), this);
   }
 
   public void sendPackets() {
     int counter = 0;
-    RadioDataMsg payload = new RadioDataMsg();
+    SerialData payload = new SerialData();
     
     try {
       while (true) {
@@ -42,8 +42,8 @@ public class PC implements MessageListener {
   }
 
   public void messageReceived(int to, Message message) {
-    RadioDataMsg msg = (RadioDataMsg)message;
-    System.out.println ("Got a packet.");
+    SerialData msg = (SerialData)message;
+    System.out.println ("Mote " + msg.get_id() + " changed to state " + msg.get_state());
     //    System.out.println("Received packet sequence number " + msg.get_counter());
   }
   
