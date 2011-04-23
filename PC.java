@@ -8,6 +8,8 @@
 
 import java.io.IOException;
 
+import java.util.LinkedList;
+
 import net.tinyos.message.*;
 import net.tinyos.packet.*;
 import net.tinyos.util.*;
@@ -15,36 +17,42 @@ import net.tinyos.util.*;
 public class PC implements MessageListener {
 
   private MoteIF moteIF;
+
+  public static long start_time;
+
+  private class Event {
+		private int id;
+		private boolean state;
+		long timestamp;
+		
+		public Event (short id, short state) {
+			this.id = id;
+			this.state = (state != 0);
+			this.timestamp = System.currentTimeMillis () - start_time;
+		}
+
+		private String offOrOn () {
+			if (state) {
+				return "on";
+			}
+			return "off";
+		}
+		
+		public String toString () {
+			return "[" + timestamp / 1000 + "] Mote " + id + " turned " + offOrOn();
+		}
+  }
+
+  private static LinkedList<Event> events;
   
   public PC(MoteIF moteIF) {
     this.moteIF = moteIF;
     this.moteIF.registerListener(new SerialData(), this);
   }
 
-  public void sendPackets() {
-    int counter = 0;
-    SerialData payload = new SerialData();
-    
-    try {
-      while (true) {
-	System.out.println("Sending packet " + counter);
-//	payload.set_counter(counter);
-	moteIF.send(0, payload);
-	counter++;
-	try {Thread.sleep(1000);}
-	catch (InterruptedException exception) {}
-      }
-    }
-    catch (IOException exception) {
-      System.err.println("Exception thrown when sending packets. Exiting.");
-      System.err.println(exception);
-    }
-  }
-
   public void messageReceived(int to, Message message) {
     SerialData msg = (SerialData)message;
-    System.out.println ("Mote " + msg.get_id() + " changed to state " + msg.get_state());
-    //    System.out.println("Received packet sequence number " + msg.get_counter());
+    events.addLast (new Event (msg.get_id(), msg.get_state()));
   }
   
   private static void usage() {
@@ -73,12 +81,32 @@ public class PC implements MessageListener {
     else {
       phoenix = BuildSource.makePhoenix(source, PrintStreamMessenger.err);
     }
-      
+    
     MoteIF mif = new MoteIF(phoenix);
+    
+    events = new LinkedList<Event> ();
+
+    start_time = System.currentTimeMillis();
     
     PC serial = new PC(mif);
 
-//    serial.sendPackets();
+    while (true) {
+    	int redMote = 0, greenMote = 0;
+    	
+    	Thread.sleep (5000);
+    	for (Event e : events) {
+    		System.out.println (e);
+    		if (e.id == 0 && e.state) {
+    			redMote++;
+    		}
+    		if (e.id == 1 && e.state) {
+    			greenMote++;
+    		}
+    	}
+    	System.out.println ("Red mote went above its threshold " + redMote + " times.");
+    	System.out.println ("Green mote went above its threshold " + greenMote + " times.");
+    	events = new LinkedList<Event> ();
+    }
   }
 
 
