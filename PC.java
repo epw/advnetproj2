@@ -93,7 +93,7 @@ public class PC implements MessageListener {
     while (true) {
     	int redMote = 0, greenMote = 0;
     	
-    	Thread.sleep (5000);
+    	Thread.sleep (60000);
     	for (Event e : events) {
     		System.out.println (e);
     		if (e.id == 0 && e.state) {

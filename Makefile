@@ -1,5 +1,6 @@
 COMPONENT=SenseAppC
 C2420_CHANNEL=14
+CFlags = -DCC2420_DEF_RFPower=3
 BUILD_EXTRA_DEPS = SerialData.class
 CLEAN_EXTRA = RadioDataMsg.py RadioDataMsg.class RadioDataMsg.java SerialData.class SerialData.java
 

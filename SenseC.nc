@@ -57,8 +57,10 @@ enum {
 #define MY_MOTE_ID MOTE0
 
 // sampling delays in binary milliseconds
-#define SAMPLING_DELAY 250
-#define BLUE_LED_SAMPLING_DELAY 1000
+#define RED_SAMPLING_DELAY 1000
+#define GREEN_SAMPLING_DELAY 2000
+#define SAMPLING_DELAY() (MY_MOTE_ID == MOTE1 ? GREEN_SAMPLING_DELAY : RED_SAMPLING_DELAY)
+#define BLUE_LED_SAMPLING_DELAY 500
   
 // light threshold
 #define LIGHT_THRES 100
@@ -129,7 +131,7 @@ implementation
   
   event void RadioAMControl.startDone(error_t err) {
     if (err == SUCCESS) {
-		call SamplingTimer.startPeriodic(SAMPLING_DELAY);
+		call SamplingTimer.startPeriodic(SAMPLING_DELAY());
 		call BlueLedTimer.startPeriodic(BLUE_LED_SAMPLING_DELAY);
     }
     else {
